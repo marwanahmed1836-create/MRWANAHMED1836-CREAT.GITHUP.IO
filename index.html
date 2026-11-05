@@ -8,7 +8,7 @@
         body {
             margin: 0;
             padding: 0;
-            background-color: #111;
+            background-color: #0b0908;
             color: #fff;
             font-family: 'Courier New', Courier, monospace;
             display: flex;
@@ -21,11 +21,11 @@
         #game-container {
             position: relative;
             width: 100%;
-            max-width: 800px;
-            height: 400px;
-            background-color: #1a1518;
-            border: 8px solid #ffd700; /* الإطار الذهبي */
-            box-shadow: 0 0 30px rgba(255, 215, 0, 0.5), inset 0 0 20px rgba(0, 0, 0, 0.8);
+            max-width: 900px;
+            height: 500px;
+            background-color: #151110;
+            border: 4px solid #3d2817;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
             overflow: hidden;
             display: flex;
             flex-direction: column;
@@ -41,181 +41,190 @@
 
         #overlay-text {
             position: absolute;
-            top: 30px;
+            top: 25px;
             left: 50%;
             transform: translateX(-50%);
-            color: #ffaa00;
-            font-size: 24px;
+            color: #e5a93b;
+            font-size: 28px;
             font-weight: bold;
             text-shadow: 3px 3px #000;
             text-align: center;
             pointer-events: none;
-            border: 2px dashed #ffd700;
-            padding: 5px 15px;
-            background: rgba(0, 0, 0, 0.5);
+            letter-spacing: 2px;
         }
 
         #touch-controls {
             position: absolute;
-            bottom: 10px;
-            left: 10px;
-            right: 10px;
+            bottom: 15px;
+            left: 15px;
+            right: 15px;
             display: flex;
             justify-content: space-between;
             z-index: 10;
         }
 
         .ctrl-btn {
-            background: rgba(255, 255, 255, 0.2);
-            border: 2px solid #ffd700;
+            background: rgba(40, 30, 20, 0.7);
+            border: 2px solid #8c6747;
             color: white;
-            padding: 15px 30px;
-            font-size: 18px;
+            padding: 15px 25px;
+            font-size: 20px;
             font-weight: bold;
-            border-radius: 5px;
+            border-radius: 8px;
             user-select: none;
+            outline: none;
         }
 
         .ctrl-btn:active {
-            background: rgba(255, 215, 0, 0.5);
+            background: rgba(140, 103, 71, 0.9);
         }
     </style>
 </head>
 <body>
 
-<div id="game-container">
-    <div id="overlay-text">WHAT IT COULD BE ????</div>
-    <canvas id="gameCanvas"></canvas>
-    <div id="touch-controls">
-        <div class="ctrl-btn" id="btn-left">←</div>
-        <div class="ctrl-btn" id="btn-action">OPEN</div>
-        <div class="ctrl-btn" id="btn-right">→</div>
+    <div id="game-container">
+        <div id="overlay-text">WHAT IT COULD BE ????</div>
+        <canvas id="gameCanvas"></canvas>
+        <div id="touch-controls">
+            <button class="ctrl-btn" id="btn-left">←</button>
+            <button class="ctrl-btn" id="btn-action">إضاءة</button>
+            <button class="ctrl-btn" id="btn-right">→</button>
+        </div>
     </div>
-</div>
 
-<script>
-    const canvas = document.getElementById('gameCanvas');
-    const ctx = canvas.getContext('2d');
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
 
-    canvas.width = 800;
-    canvas.height = 400;
+        canvas.width = 900;
+        canvas.height = 500;
 
-    let playerX = 100;
-    let playerY = 280;
-    const playerWidth = 40;
-    const playerHeight = 80;
-    let isMovingLeft = false;
-    let isMovingRight = false;
-    let torchIntensity = 0;
+        let playerX = 100;
+        let playerY = 320;
+        const playerWidth = 35;
+        const playerHeight = 65;
+        let isMovingLeft = false;
+        let isMovingRight = false;
+        let isLighting = false;
 
-    // عناصر التحكم باللمس
-    document.getElementById('btn-left').addEventListener('touchstart', () => isMovingLeft = true);
-    document.getElementById('btn-left').addEventListener('touchend', () => isMovingLeft = false);
-    document.getElementById('btn-right').addEventListener('touchstart', () => isMovingRight = true);
-    document.getElementById('btn-right').addEventListener('touchend', () => isMovingRight = false);
+        // عناصر التحكم باللمس
+        document.getElementById('btn-left').addEventListener('touchstart', () => { isMovingLeft = true; });
+        document.getElementById('btn-left').addEventListener('touchend', () => { isMovingLeft = false; });
+        document.getElementById('btn-right').addEventListener('touchstart', () => { isMovingRight = true; });
+        document.getElementById('btn-right').addEventListener('touchend', () => { isMovingRight = false; });
+        document.getElementById('btn-action').addEventListener('touchstart', () => { isLighting = !isLighting; });
 
-    // عناصر التحكم بلوحة المفاتيح
-    window.addEventListener('keydown', (e) => {
-        if (e.key === 'ArrowLeft' || e.key === 'a') isMovingLeft = true;
-        if (e.key === 'ArrowRight' || e.key === 'd') isMovingRight = true;
-    });
-    window.addEventListener('keyup', (e) => {
-        if (e.key === 'ArrowLeft' || e.key === 'a') isMovingLeft = false;
-        if (e.key === 'ArrowRight' || e.key === 'd') isMovingRight = false;
-    });
+        // لوحة المفاتيح للاختبار
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft' || e.key === 'a') isMovingLeft = true;
+            if (e.key === 'ArrowRight' || e.key === 'd') isMovingRight = true;
+        });
+        window.addEventListener('keyup', (e) => {
+            if (e.key === 'ArrowLeft' || e.key === 'a') isMovingLeft = false;
+            if (e.key === 'ArrowRight' || e.key === 'd') isMovingRight = false;
+        });
 
-    function drawCave() {
-        // الخلفية الصخرية
-        ctx.fillStyle = '#141416';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        function drawCaveBackground() {
+            // جدران الكهف الداكنة والعشب
+            ctx.fillStyle = '#110e0c';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // تفاصيل الصخور والنتوءات
-        ctx.fillStyle = '#221e22';
-        ctx.fillRect(0, 350, canvas.width, 50); // الأرضية
-        ctx.fillRect(0, 0, 50, canvas.height); // الجدار الأيسر
-        ctx.fillRect(750, 0, 50, canvas.height); // الجدار الأيمن
+            // تفاصيل الصخور والكهف المظلم بالخلفية
+            ctx.fillStyle = '#1c1714';
+            ctx.fillRect(50, 50, 200, 150);
+            ctx.fillRect(650, 40, 220, 180);
 
-        // خيوط العنكبوت
-        ctx.strokeStyle = '#4a4852';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(0, 0); ctx.lineTo(100, 100);
-        ctx.moveTo(800, 0); ctx.lineTo(700, 100);
-        ctx.stroke();
-    }
+            // مساحة السماء/السحب الزرقاء المميزة في وسط الصورة
+            ctx.fillStyle = '#22527b';
+            ctx.fillRect(250, 80, 400, 240);
 
-    function drawClouds() {
-        ctx.save();
-        // تأثير البوابة السحابية في المنتصف
-        const gradient = ctx.createRadialGradient(400, 150, 50, 400, 150, 250);
-        gradient.addColorStop(0, 'rgba(255, 255, 255, 0.9)');
-        gradient.addColorStop(0.5, 'rgba(180, 220, 255, 0.6)');
-        gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
-        
-        ctx.fillStyle = gradient;
-        ctx.fillRect(200, 50, 400, 200);
+            // رسومات السحب البيضاء البكسلية داخل المنطقة الزرقاء
+            ctx.fillStyle = '#dbe4ee';
+            ctx.beginPath();
+            ctx.arc(350, 180, 45, 0, Math.PI * 2);
+            ctx.arc(420, 160, 60, 0, Math.PI * 2);
+            ctx.arc(500, 190, 50, 0, Math.PI * 2);
+            ctx.arc(570, 170, 40, 0, Math.PI * 2);
+            ctx.fill();
 
-        // سحب بكسلية متداخلة
-        ctx.fillStyle = '#ffffff';
-        // سحابة 1
-        ctx.fillRect(250, 120, 120, 60);
-        ctx.fillRect(220, 140, 160, 50);
-        // سحابة 2
-        ctx.fillRect(430, 100, 140, 70);
-        ctx.fillRect(450, 80, 100, 60);
+            ctx.fillStyle = '#f0f4f8';
+            ctx.beginPath();
+            ctx.arc(380, 190, 30, 0, Math.PI * 2);
+            ctx.arc(470, 170, 45, 0, Math.PI * 2);
+            ctx.fill();
 
-        // جسيمات ضوئية متطايرة نحو البوابة
-        ctx.fillStyle = '#ffd700';
-        for (let i = 0; i < 5; i++) {
-            let x = 350 + Math.sin(Date.now() / 500 + i) * 100;
-            let y = 150 + Math.cos(Date.now() / 300 + i) * 30;
-            ctx.fillRect(x, y, 6, 6);
+            // العنصر المتوهج العائم في المنتصف (الحجر السحري)
+            ctx.fillStyle = '#fce251';
+            ctx.beginPath();
+            ctx.ellipse(470, 180, 12, 18, Math.PI / 4, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // هالة التوهج حول الحجر
+            ctx.strokeStyle = 'rgba(252, 226, 81, 0.4)';
+            ctx.lineWidth = 6;
+            ctx.beginPath();
+            ctx.arc(470, 180, 25, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // الأرضية الخشبية للكهف
+            ctx.fillStyle = '#2b1d12';
+            ctx.fillRect(0, 380, canvas.width, 120);
+            
+            ctx.fillStyle = '#3a2618';
+            ctx.fillRect(0, 380, canvas.width, 10); // خط الأرض العلوي
         }
-        ctx.restore();
-    }
 
-    function drawPlayer() {
-        ctx.save();
-        // حركة بسيطة للشخصية
-        let bobbing = Math.sin(Date.now() / 100) * 5;
+        function drawPlayer() {
+            // رسم الشخصية (مغامر بملابس داكنة وشعلة نارية)
+            // الجسم
+            ctx.fillStyle = '#333333';
+            ctx.fillRect(playerX, playerY + 15, playerWidth - 10, 35);
 
-        // الجسم
-        ctx.fillStyle = '#333333';
-        ctx.fillRect(playerX, playerY + bobbing, 30, 50);
+            // الرأس والشعر الأسود
+            ctx.fillStyle = '#ffcc99';
+            ctx.fillRect(playerX + 2, playerY, 20, 20);
+            ctx.fillStyle = '#111111';
+            ctx.fillRect(playerX, playerY - 3, 22, 10);
 
-        // الرأس
-        ctx.fillStyle = '#ffcc99';
-        ctx.fillRect(playerX + 5, playerY - 15 + bobbing, 20, 20);
+            // الشعلة اليدوية وتأثير الإضاءة
+            ctx.fillStyle = '#8c5830'; // عصا الشعلة
+            ctx.fillRect(playerX + 22, playerY + 25, 6, 20);
 
-        // الشعر (أسود)
-        ctx.fillStyle = '#111111';
-        ctx.fillRect(playerX + 5, playerY - 20 + bobbing, 22, 10);
+            // لهب الشعلة البرتقالي
+            ctx.fillStyle = '#ff4500';
+            ctx.beginPath();
+            ctx.arc(playerX + 25, playerY + 20, isLighting ? 14 : 9, 0, Math.PI * 2);
+            ctx.fill();
 
-        // اليد والشعلة
-        ctx.fillStyle = '#ff4500'; // لهب الشعلة
-        torchIntensity = Math.random() * 10;
-        ctx.fillRect(playerX + 35, playerY - 5 + bobbing - torchIntensity, 10, 15);
-        
-        ctx.fillStyle = '#8B4513'; // مقبض الشعلة
-        ctx.fillRect(playerX + 38, playerY + 10 + bobbing, 4, 15);
+            // توهج الشعلة إذا كانت مضاءة
+            if (isLighting) {
+                const gradient = ctx.createRadialGradient(playerX + 25, playerY + 20, 10, playerX + 25, playerY + 20, 90);
+                gradient.addColorStop(0, 'rgba(255, 165, 0, 0.4)');
+                gradient.addColorStop(1, 'rgba(255, 165, 0, 0)');
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(playerX + 25, playerY + 20, 90, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
 
-        ctx.restore();
-    }
+        function update() {
+            if (isMovingLeft && playerX > 20) {
+                playerX -= 4;
+            }
+            if (isMovingRight && playerX < canvas.width - 60) {
+                playerX += 4;
+            }
+        }
 
-    function update() {
-        if (isMovingLeft && playerX > 20) playerX -= 4;
-        if (isMovingRight && playerX < 740) playerX += 4;
-    }
+        function gameLoop() {
+            update();
+            drawCaveBackground();
+            drawPlayer();
+            requestAnimationFrame(gameLoop);
+        }
 
-    function gameLoop() {
-        update();
-        drawCave();
-        drawClouds();
-        drawPlayer();
-        requestAnimationFrame(gameLoop);
-    }
-
-    gameLoop();
-</script>
+        gameLoop();
+    </script>
 </body>
 </html>
