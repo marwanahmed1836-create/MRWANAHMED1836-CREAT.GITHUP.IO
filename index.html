@@ -8,8 +8,14 @@
 :root{--gold:#f2bd52;--ink:#080d17}
 *{box-sizing:border-box}
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#070b13;color:#f5eee0;font-family:system-ui,Segoe UI,sans-serif;touch-action:none}
-body{display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 35%,#1a2940,#070b13 70%)}
+body{display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 35%,#1a2940,#070b13 70%);min-height:100dvh}
 #shell{width:min(100vw,1100px);padding:12px}
+@media(max-width:700px) and (min-height:700px){
+ body{align-items:flex-start}
+ #shell{width:100%;padding:clamp(12px,3vh,28px) 10px 12px}
+ header{padding-bottom:8px}
+ #hint{padding-top:10px}
+}
 header{display:flex;justify-content:space-between;align-items:center;padding:2px 4px 10px;gap:8px}
 h1{font-size:clamp(15px,3vw,25px);letter-spacing:2px;margin:0;color:var(--gold);text-shadow:2px 3px #5b321b}
 #hud{font-size:12px;color:#c9d5e4;letter-spacing:1px}
@@ -23,8 +29,8 @@ button{border:2px solid #ffe09a;background:#d99a35;color:#21170c;font-weight:900
 button:active{transform:translate(2px,2px);box-shadow:2px 2px #573817}
 #touch{display:flex;justify-content:space-between;align-items:center;padding:12px 4px 0;user-select:none}
 .pad{display:flex;gap:10px}
-.ctrl{width:62px;height:54px;border:2px solid #8a8b91;background:#182437dd;color:#fff;border-radius:10px;font-size:24px;box-shadow:0 4px #05070c;touch-action:none}
-.ctrl.jump{width:86px;background:#6b4a23;color:#ffe3a0;font-size:14px}
+.ctrl{width:68px;height:58px;border:2px solid #a0a4ae;background:#202d43ee;color:#fff;border-radius:12px;font-size:26px;box-shadow:0 4px #05070c;touch-action:none}
+.ctrl.jump{width:96px;background:#765027;color:#ffe3a0;font-size:15px}
 #hint{text-align:center;font-size:11px;color:#8998aa;padding-top:8px}
 @media(min-width:800px){#touch{opacity:.65}.ctrl{width:54px;height:44px}}
 </style>
@@ -48,8 +54,9 @@ const c=document.getElementById('game'),ctx=c.getContext('2d'),overlay=document.
 ctx.imageSmoothingEnabled=false;
 const W=960,H=540, keys={}, touch={left:false,right:false,jump:false};
 let running=false,won=false,score=0,camera=0,frame=0;
+const motes=Array.from({length:46},(_,i)=>({x:(i*197)%2600,y:90+(i*83)%350,r:1+(i%3)*.55,s:.18+(i%5)*.09,phase:i*.8}));
 const world=2600, floor=468;
-const player={x:70,y:390,w:28,h:48,vx:0,vy:0,on:false,face:1};
+const player={x:78,y:376,w:36,h:62,vx:0,vy:0,on:false,face:1};
 const platforms=[
 [0,468,560,72],[600,468,380,72],[1030,468,420,72],[1510,468,390,72],[1970,468,630,72],
 [270,380,120,18],[490,325,110,18],[760,390,130,18],[1110,370,120,18],[1320,315,120,18],[1600,385,130,18],[1810,330,130,18],[2110,380,140,18],[2310,315,120,18]
@@ -59,16 +66,44 @@ const feather={x:2220,y:335,got:false};
 const door={x:2500,y:388};
 function rect(x,y,w,h,col){ctx.fillStyle=col;ctx.fillRect(Math.round(x),Math.round(y),w,h)}
 function text(t,x,y,size,col){ctx.font=`bold ${size}px monospace`;ctx.fillStyle=col;ctx.fillText(t,x,y)}
+function drawCloud(x,y,s=1,shade='#e9f4ff'){
+ // Deliberately chunky cloud silhouettes, matching the reference's pixel-art look.
+ const blocks=[[-42,8,38,18],[-20,-8,42,28],[12,-18,46,38],[48,-6,42,27],[78,8,34,18],[0,18,68,18]];
+ blocks.forEach(([bx,by,bw,bh],i)=>rect(x+bx*s,y+by*s,bw*s,bh*s,i%3===1?'#c7dff2':shade));
+ rect(x-8*s,y+29*s,105*s,9*s,'#b9d4e9');
+}
 function drawBackground(){
- const g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,'#101d32');g.addColorStop(.65,'#18202b');g.addColorStop(1,'#090d15');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
- // distant cave walls
- for(let i=0;i<24;i++){let x=(i*137-camera*.25)%(W+150)-60;let y=25+(i*47)%160;rect(x,y,65,18,'#222b37');rect(x+12,y-12,38,13,'#303743');}
- for(let i=0;i<16;i++){let x=(i*191-camera*.4)%(W+180)-80;rect(x,220+(i*31)%90,90,15,'#202a35');}
- // glowing opening and clouds in the far sky
- const glow=ctx.createRadialGradient(745,170,5,745,170,180);glow.addColorStop(0,'#4f9bdc88');glow.addColorStop(1,'#17263a00');ctx.fillStyle=glow;ctx.fillRect(550,20,390,310);
- rect(670,75,145,7,'#5a9fd5');rect(645,83,195,12,'#8ac5ef');rect(690,64,65,12,'#d5edff');
- // stalactites
- for(let i=0;i<13;i++){let x=(i*83-camera*.55)%(W+100)-30;rect(x,0,13,18,'#31343b');rect(x+4,15,6,17,'#242a33');}
+ const g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,'#080d17');g.addColorStop(.62,'#18202b');g.addColorStop(1,'#090d15');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+ // deep stone wall layers
+ for(let i=0;i<30;i++){let x=(i*137-camera*.22)%(W+150)-60;let y=18+(i*47)%175;rect(x,y,68,20,'#202632');rect(x+10,y-12,43,13,'#2c3440');rect(x+5,y+20,8,5,'#111722');}
+ for(let i=0;i<17;i++){let x=(i*191-camera*.36)%(W+180)-80;rect(x,220+(i*31)%90,92,16,'#1d2632');}
+ // monumental opening to the bright world beyond
+ rect(438,70,478,282,'#050b15');rect(449,80,456,260,'#286ca6');
+ const sky=ctx.createLinearGradient(0,90,0,335);sky.addColorStop(0,'#1e69a8');sky.addColorStop(.6,'#4b9bd1');sky.addColorStop(1,'#b8d9ec');ctx.fillStyle=sky;ctx.fillRect(451,82,452,256);
+ // distant haze and pixel clouds drifting slowly
+ ctx.save();ctx.beginPath();ctx.rect(451,82,452,256);ctx.clip();
+ const drift=(frame*.20)%560;
+ drawCloud(535-drift,178,1.15);drawCloud(735-drift,128,1.48,'#f5f8ff');
+ drawCloud(930-drift,220,1.10);drawCloud(625-drift,285,1.0,'#d8e9f6');
+ drawCloud(1100-drift,155,1.20);drawCloud(835-drift,300,.95);
+ // tiny bright specks
+ for(let i=0;i<22;i++){let sx=(i*71+frame*.12)%450+452,sy=96+(i*37)%220;rect(sx,sy,2,2,'#e9f7ff');}
+ // a tiny golden feather-like glint in the open sky
+ const pulse=1+Math.sin(frame*.06)*.12;ctx.save();ctx.translate(735,218);ctx.rotate(-.65);rect(-4*pulse,-17*pulse,8*pulse,34*pulse,'#fff3bd');rect(-10*pulse,-6*pulse,7*pulse,8*pulse,'#fff');rect(4*pulse,4*pulse,7*pulse,8*pulse,'#fff');ctx.restore();
+ ctx.restore();
+ // stone frame around the opening
+ rect(426,60,20,305,'#34333a');rect(905,60,20,305,'#34333a');rect(426,60,499,20,'#34333a');rect(426,345,499,20,'#34333a');
+ rect(434,74,5,270,'#706253');rect(911,74,5,270,'#706253');
+ // stalactites and cobwebs
+ for(let i=0;i<13;i++){let x=(i*83-camera*.5)%(W+100)-30;rect(x,0,14,19,'#30313a');rect(x+4,16,6,18,'#242a33');}
+ // small hanging web strands
+ for(let i=0;i<5;i++){let x=(i*227-camera*.15)%(W+80);rect(x,0,2,22+(i%3)*9,'#5a5351');rect(x+2,20+(i%3)*9,15,2,'#5a5351');}
+ // warm lanterns on the cave wall
+ [[65,280],[455,300],[925,280]].forEach(([x,y])=>{rect(x,y,8,20,'#493a2c');rect(x+2,y-5,4,7,'#ffbd55');});
+ // faint carved stone ribs and old masonry around the cave
+ for(let i=0;i<8;i++){let x=(i*151-camera*.28)%(W+120)-45;rect(x,365,7,42,'#252a32');rect(x+7,365,23,5,'#34333a');rect(x+24,370,5,34,'#202630');}
+ // corner cobwebs, kept subtle so the scene stays readable
+ for(let side of [0,1]){let bx=side?W-68:14;for(let j=0;j<5;j++){rect(bx+j*7,8+j*5,2,30-j*3,'#514a4c');rect(bx,8+j*7,32-j*4,2,'#514a4c');}}
 }
 function drawWorld(){
  ctx.save();ctx.translate(-camera,0);
@@ -85,45 +120,88 @@ function drawWorld(){
  ctx.restore();
 }
 function drawPlayer(){
- const x=player.x,y=player.y;
- // shadow
- rect(x+2,y+player.h,26,4,'#05070a99');
- // legs
- rect(x+5,y+31,8,15,'#202b3c');rect(x+17,y+31,8,15,'#202b3c');rect(x+2,y+43,12,5,'#11151d');rect(x+16,y+43,13,5,'#11151d');
- // body and jacket
- rect(x+4,y+17,22,19,'#65717b');rect(x+7,y+20,16,13,'#313d4b');rect(x+13,y+19,4,14,'#b6a58d');
- // hair/head
- rect(x+5,y+2,20,17,'#d6a27e');rect(x+3,y,23,8,'#17151b');rect(x+2,y+4,7,9,'#17151b');rect(x+21,y+4,6,8,'#17151b');
- rect(x+(player.face===1?18:7),y+9,3,3,'#17151b');rect(x+10,y+15,8,2,'#704a3d');
- // torch arm and flame
- let tx=x+(player.face===1?28:-5);rect(tx,y+19,5,12,'#bd8d5c');rect(tx+1,y+12,4,8,'#8b603b');rect(tx-1,y+5,7,8,'#ffb632');rect(tx+1,y+1,4,6,'#fff1a2');
+ const moving=Math.abs(player.vx)>.25;
+ const walk=moving?Math.sin(frame*.34):Math.sin(frame*.075)*.7;
+ const bob=moving?Math.abs(Math.sin(frame*.34))*1.8:Math.sin(frame*.075)*.8;
+ const legSwing=moving?Math.sin(frame*.34)*3.2:0;
+ const armSwing=moving?-Math.sin(frame*.34)*2:0;
+ const x=Math.round(player.x),y=Math.round(player.y+bob);
+ ctx.save();ctx.translate(x,y);ctx.scale(1.30,1.28);
+ // contact shadow
+ rect(1,48,29,4,'#03050a');
+ // animated legs and boots
+ rect(5+legSwing*.45,34,8,11,'#202a3a');rect(17-legSwing*.45,34,8,11,'#202a3a');
+ rect(2+legSwing*.55,43,12,5,'#171923');rect(16-legSwing*.55,43,13,5,'#171923');
+ rect(8+legSwing*.45,38,3,3,'#39475a');rect(20-legSwing*.45,38,3,3,'#39475a');
+ // jacket, folds and belt
+ rect(4,18,22,19,'#78838d');rect(7,20,16,14,'#465362');
+ rect(4,24,5,8,'#9ba5ac');rect(21,24,5,8,'#9ba5ac');
+ rect(13,19,4,16,'#c3b294');rect(11,34,9,3,'#222631');
+ // neck and face
+ rect(11,14,9,6,'#a96f53');rect(6,3,19,15,'#c58b69');
+ rect(4,7,4,9,'#9c654f');rect(22,7,4,8,'#9c654f');
+ // thick, uneven black hair
+ rect(5,1,19,7,'#17151b');rect(3,4,6,8,'#17151b');
+ rect(8,-2,7,5,'#29232c');rect(16,-1,7,6,'#211e27');
+ rect(22,3,5,7,'#17151b');rect(7,7,5,3,'#17151b');
+ // curious eyes and expression
+ if(player.face===1){rect(18,9,3,3,'#17151b');rect(12,8,4,2,'#49302b');}
+ else{rect(8,9,3,3,'#17151b');rect(15,8,4,2,'#49302b');}
+ rect(15,15,5,2,'#75483e');
+ // torch arm bobs with each step; flame flickers
+ const ax=player.face===1?25:-2;
+ rect(ax,y?23+armSwing:23,7,8,'#bd8667');rect(ax+1,18+armSwing,5,7,'#78838d');
+ rect(ax+2,12+armSwing,4,9,'#8a5b36');
+ const flick=Math.sin(frame*.42)*1.4;
+ rect(ax+1,7+armSwing+flick,7,8,'#ffad35');
+ rect(ax+3,2+armSwing+flick,4,7,'#fff1a4');rect(ax+2,6+armSwing+flick,6,4,'#ffd35d');
+ ctx.restore();
 }
 function drawLight(){
- const px=player.x-camera+15,py=player.y+23;
- const grad=ctx.createRadialGradient(px,py,8,px,py,235);grad.addColorStop(0,'#ffcc6640');grad.addColorStop(.35,'#ffbd3820');grad.addColorStop(1,'#020610ee');
- ctx.fillStyle=grad;ctx.fillRect(0,0,W,H);
- // vignette
- const v=ctx.createRadialGradient(W/2,H/2,130,W/2,H/2,560);v.addColorStop(.45,'#00000000');v.addColorStop(1,'#02040b99');ctx.fillStyle=v;ctx.fillRect(0,0,W,H);
+ const px=player.x-camera+20,py=player.y+27;
+ // A readable ambient level keeps walls and platforms visible beyond the torch pool.
+ ctx.save();
+ ctx.fillStyle='rgba(2,5,12,0.48)';ctx.fillRect(0,0,W,H);
+ ctx.globalCompositeOperation='destination-out';
+ const reveal=ctx.createRadialGradient(px,py,8,px,py,275);
+ reveal.addColorStop(0,'rgba(0,0,0,1)');
+ reveal.addColorStop(.36,'rgba(0,0,0,0.94)');
+ reveal.addColorStop(.72,'rgba(0,0,0,0.55)');
+ reveal.addColorStop(1,'rgba(0,0,0,0)');
+ ctx.fillStyle=reveal;ctx.fillRect(px-280,py-280,560,560);
+ ctx.restore();
+ // Torch bloom
+ const glow=ctx.createRadialGradient(px+player.face*24,py-12,2,px+player.face*30,py-8,155);
+ glow.addColorStop(0,'rgba(255,218,126,0.46)');
+ glow.addColorStop(.24,'rgba(255,174,64,0.24)');
+ glow.addColorStop(.58,'rgba(255,147,48,0.08)');
+ glow.addColorStop(1,'rgba(255,150,40,0)');
+ ctx.fillStyle=glow;ctx.fillRect(px-170,py-175,340,340);
+ // Gentle edge vignette, not a black screen
+ const v=ctx.createRadialGradient(W/2,H/2,180,W/2,H/2,590);
+ v.addColorStop(.48,'rgba(0,0,0,0)');v.addColorStop(1,'rgba(0,0,0,0.42)');
+ ctx.fillStyle=v;ctx.fillRect(0,0,W,H);
 }
 function draw(){
  drawBackground();drawWorld();drawLight();
  // HUD overlay / hints
  text('THE CAVE',22,34,15,'#d8b66c');
  if(feather.got)text('THE FEATHER IS YOURS',W-260,34,13,'#fff0ad');
+ else if(score===5)text('A LIGHT CALLS FROM ABOVE…',W-310,34,12,'#ffe5a5');
  if(won){ctx.fillStyle='#050914bb';ctx.fillRect(0,0,W,H);text('THE BEGINNING…',W/2-150,H/2-15,30,'#ffd778');text('YOU FOUND A LITTLE LIGHT.',W/2-145,H/2+22,14,'#fff');}
 }
 function update(){
  if(!running||won)return;
  frame++;
  let left=keys.ArrowLeft||keys.a||touch.left,right=keys.ArrowRight||keys.d||touch.right,jump=keys[' ']||keys.ArrowUp||keys.w||touch.jump;
- player.vx=(right?3.1:0)-(left?3.1:0);if(player.vx)player.face=player.vx>0?1:-1;
- if(jump&&player.on){player.vy=-10.7;player.on=false;}
- player.vy=Math.min(player.vy+.48,12);
+ const target=(right?3.35:0)-(left?3.35:0);player.vx+=(target-player.vx)*0.34;if(!left&&!right)player.vx*=0.78;if(Math.abs(player.vx)<0.08)player.vx=0;if(player.vx)player.face=player.vx>0?1:-1;
+ if(jump&&player.on){player.vy=-11.2;player.on=false;}
+ player.vy=Math.min(player.vy+.43,11);
  let nx=player.x+player.vx,ny=player.y+player.vy;
  player.x=Math.max(0,Math.min(world-player.w,nx));
  player.y=ny;player.on=false;
  for(const p of platforms){let [x,y,w,h]=p;if(player.x+player.w>x&&player.x<x+w&&player.y+player.h>=y&&player.y+player.h<=y+18&&player.vy>=0){player.y=y-player.h;player.vy=0;player.on=true;}}
- if(player.y>H+100){player.x=70;player.y=390;player.vy=0;}
+ if(player.y>H+100){player.x=78;player.y=376;player.vy=0;}
  crystals.forEach(a=>{if(!a.got&&Math.abs(player.x+14-a.x)<24&&Math.abs(player.y+20-a.y)<34){a.got=true;score++;document.getElementById('score').textContent=score;}});
  if(score===5&&Math.abs(player.x-feather.x)<40&&Math.abs(player.y-feather.y)<65)feather.got=true;
  if(feather.got&&player.x+player.w>door.x&&player.x<door.x+55){won=true;}
@@ -131,6 +209,7 @@ function update(){
 }
 function loop(){update();draw();requestAnimationFrame(loop)}
 document.getElementById('start').onclick=()=>{overlay.style.display='none';running=true;};
+document.addEventListener('contextmenu',e=>e.preventDefault());
 document.addEventListener('keydown',e=>{keys[e.key]=true;if([' ','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key))e.preventDefault();});
 document.addEventListener('keyup',e=>keys[e.key]=false);
 document.querySelectorAll('.ctrl').forEach(b=>{
