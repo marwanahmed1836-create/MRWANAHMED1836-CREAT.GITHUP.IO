@@ -3,272 +3,219 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>مغامرة الكهف - ماينكرافت</title>
+    <title>مغامرة الكهف الغامض</title>
     <style>
         body {
             margin: 0;
             padding: 0;
             background-color: #111;
             color: #fff;
-            font-family: 'Courier New', monospace;
+            font-family: 'Courier New', Courier, monospace;
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
             overflow: hidden;
-            touch-action: none;
         }
+
         #game-container {
             position: relative;
             width: 100%;
-            max-width: 400px;
-            height: 600px;
-            background: #1a1a1a;
-            border: 4px solid #333;
-            box-shadow: 0 0 20px rgba(0,0,0,0.8);
+            max-width: 800px;
+            height: 400px;
+            background-color: #1a1518;
+            border: 8px solid #ffd700; /* الإطار الذهبي */
+            box-shadow: 0 0 30px rgba(255, 215, 0, 0.5), inset 0 0 20px rgba(0, 0, 0, 0.8);
             overflow: hidden;
-        }
-        canvas {
-            display: block;
-            background: #0d0d0d;
-            image-rendering: pixelated;
-        }
-        #start-screen {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.85);
             display: flex;
             flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 10;
-            cursor: pointer;
+            justify-content: flex-end;
         }
-        #start-screen h1 {
-            color: #ffaa00;
-            font-size: 28px;
-            text-shadow: 3px 3px #000;
-            margin-bottom: 10px;
-            text-align: center;
-        }
-        #start-screen p {
-            color: #fff;
-            font-size: 16px;
-            animation: blink 1s infinite;
-        }
-        @keyframes blink {
-            0% { opacity: 1; }
-            50% { opacity: 0.3; }
-            100% { opacity: 1; }
-        }
-        .controls {
-            position: absolute;
-            bottom: 20px;
+
+        canvas {
+            display: block;
             width: 100%;
-            display: flex;
-            justify-content: space-around;
-            z-index: 5;
+            height: 100%;
+            image-rendering: pixelated;
         }
-        .btn {
+
+        #overlay-text {
+            position: absolute;
+            top: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #ffaa00;
+            font-size: 24px;
+            font-weight: bold;
+            text-shadow: 3px 3px #000;
+            text-align: center;
+            pointer-events: none;
+            border: 2px dashed #ffd700;
+            padding: 5px 15px;
+            background: rgba(0, 0, 0, 0.5);
+        }
+
+        #touch-controls {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            right: 10px;
+            display: flex;
+            justify-content: space-between;
+            z-index: 10;
+        }
+
+        .ctrl-btn {
             background: rgba(255, 255, 255, 0.2);
-            border: 2px solid #fff;
+            border: 2px solid #ffd700;
             color: white;
-            padding: 15px 25px;
+            padding: 15px 30px;
             font-size: 18px;
             font-weight: bold;
-            border-radius: 8px;
+            border-radius: 5px;
             user-select: none;
         }
-        .btn:active {
-            background: rgba(255, 255, 255, 0.5);
+
+        .ctrl-btn:active {
+            background: rgba(255, 215, 0, 0.5);
         }
     </style>
 </head>
 <body>
 
 <div id="game-container">
-    <div id="start-screen">
-        <h1>مغامرة الكهف المظلم</h1>
-        <p>اضغط هنا للبدء (TAP TO START)</p>
-    </div>
-    <canvas id="gameCanvas" width="400" height="600"></canvas>
-    
-    <div class="controls">
-        <div class="btn" id="left-btn">◀</div>
-        <div class="btn" id="action-btn">OPEN</div>
-        <div class="btn" id="right-btn">▶</div>
+    <div id="overlay-text">WHAT IT COULD BE ????</div>
+    <canvas id="gameCanvas"></canvas>
+    <div id="touch-controls">
+        <div class="ctrl-btn" id="btn-left">←</div>
+        <div class="ctrl-btn" id="btn-action">OPEN</div>
+        <div class="ctrl-btn" id="btn-right">→</div>
     </div>
 </div>
 
 <script>
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
-const startScreen = document.getElementById('start-screen');
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
 
-let gameStarted = false;
-let player = { x: 50, y: 480, width: 30, height: 50, speed: 4, vx: 0 };
-let chest = { x: 300, y: 485, width: 40, height: 35, opened: false };
-let particles = [];
-let achievementUnlocked = false;
+    canvas.width = 800;
+    canvas.height = 400;
 
-// بدء اللعبة
-startScreen.addEventListener('click', () => {
-    startScreen.style.display = 'none';
-    gameStarted = true;
-});
+    let playerX = 100;
+    let playerY = 280;
+    const playerWidth = 40;
+    const playerHeight = 80;
+    let isMovingLeft = false;
+    let isMovingRight = false;
+    let torchIntensity = 0;
 
-// التحكم باللوحة المفاتيح
-let keys = {};
-window.addEventListener('keydown', e => keys[e.key] = true);
-window.addEventListener('keyup', e => keys[e.key] = false);
+    // عناصر التحكم باللمس
+    document.getElementById('btn-left').addEventListener('touchstart', () => isMovingLeft = true);
+    document.getElementById('btn-left').addEventListener('touchend', () => isMovingLeft = false);
+    document.getElementById('btn-right').addEventListener('touchstart', () => isMovingRight = true);
+    document.getElementById('btn-right').addEventListener('touchend', () => isMovingRight = false);
 
-// التحكم باللمس للأزرار
-document.getElementById('left-btn').addEventListener('touchstart', () => player.vx = -player.speed);
-document.getElementById('left-btn').addEventListener('touchend', () => player.vx = 0);
-document.getElementById('right-btn').addEventListener('touchstart', () => player.vx = player.speed);
-document.getElementById('right-btn').addEventListener('touchend', () => player.vx = 0);
-
-document.getElementById('action-btn').addEventListener('click', () => {
-    checkChestInteraction();
-});
-
-function checkChestInteraction() {
-    let distX = Math.abs((player.x + player.width/2) - (chest.x + chest.width/2));
-    if (distX < 50 && !chest.opened) {
-        chest.opened = true;
-        triggerGoldParticles();
-        setTimeout(() => {
-            achievementUnlocked = true;
-        }, 1000);
-    }
-}
-
-function triggerGoldParticles() {
-    for (let i = 0; i < 50; i++) {
-        particles.push({
-            x: chest.x + chest.width / 2,
-            y: chest.y,
-            vx: (Math.random() - 0.5) * 6,
-            vy: (Math.random() - 1) * 6 - 2,
-            size: Math.random() * 6 + 2,
-            life: 60
-        });
-    }
-}
-
-function update() {
-    if (!gameStarted) return;
-
-    // حركة الكيبورد
-    if (keys['ArrowLeft'] || keys['a']) player.vx = -player.speed;
-    else if (keys['ArrowRight'] || keys['d']) player.vx = player.speed;
-    else if (!window.matchMedia("(pointer: coarse)").matches) {
-        // إذا لم يكن لمس
-        // player.vx = 0; // تم الاعتماد على الأزرار والأهم
-    }
-
-    if (keys[' ']) {
-        checkChestInteraction();
-    }
-
-    player.x += player.vx;
-    if (player.x < 10) player.x = 10;
-    if (player.x > canvas.width - 40) player.x = canvas.width - 40;
-
-    // تحديث الجسيمات
-    particles.forEach((p, index) => {
-        p.x += p.vx;
-        p.y += p.vy;
-        p.life--;
-        if (p.life <= 0) particles.splice(index, 1);
+    // عناصر التحكم بلوحة المفاتيح
+    window.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowLeft' || e.key === 'a') isMovingLeft = true;
+        if (e.key === 'ArrowRight' || e.key === 'd') isMovingRight = true;
     });
-}
-
-function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    // خلفية الكهف (جدران داكنة)
-    ctx.fillStyle = '#141414';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
-    // أرضية الكهف
-    ctx.fillStyle = '#2b2b2b';
-    ctx.fillRect(0, 535, canvas.width, 65);
-
-    // رسم الصندوق (Chest)
-    ctx.fillStyle = chest.opened ? '#8B5A2B' : '#A0522D';
-    ctx.fillRect(chest.x, chest.y, chest.width, chest.height);
-    ctx.fillStyle = '#FFD700'; // قفل ذهبي
-    ctx.fillRect(chest.x + 15, chest.y + 12, 10, 10);
-
-    // رسم الشخصية بستايل بكسل
-    ctx.fillStyle = '#3b82f6'; // قميص الشخصية
-    ctx.fillRect(player.x, player.y + 15, player.width, 25);
-    ctx.fillStyle = '#fca311'; // الوجه
-    ctx.fillRect(player.x + 5, player.y, 20, 15);
-    ctx.fillStyle = '#111'; // البنطلون
-    ctx.fillRect(player.x + 5, player.y + 40, 8, 10);
-    ctx.fillRect(player.x + 17, player.y + 40, 8, 10);
-
-    // رسم الشعلة (Torch) يد الشخصية
-    ctx.fillStyle = '#ff4500';
-    ctx.fillRect(player.x + 25, player.y + 20, 8, 12);
-    ctx.fillStyle = '#ffcc00';
-    ctx.beginPath();
-    ctx.arc(player.x + 29, player.y + 18, 6, 0, Math.PI * 2);
-    ctx.fill();
-
-    // تأثير الإضاءة حول الشخصية
-    let gradient = ctx.createRadialGradient(player.x + 15, player.y + 25, 10, player.x + 15, player.y + 25, 120);
-    gradient.addColorStop(0, 'rgba(255, 165, 0, 0.25)');
-    gradient.addColorStop(1, 'rgba(0, 0, 0, 0.95)');
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    // رسم الجسيمات الذهبية
-    particles.forEach(p => {
-        ctx.fillStyle = '#FFD700';
-        ctx.fillRect(p.x, p.y, p.size, p.size);
+    window.addEventListener('keyup', (e) => {
+        if (e.key === 'ArrowLeft' || e.key === 'a') isMovingLeft = false;
+        if (e.key === 'ArrowRight' || e.key === 'd') isMovingRight = false;
     });
 
-    // شاشة الإنجاز (Achievement)
-    if (achievementUnlocked) {
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
-        ctx.fillRect(40, 150, 320, 180);
-        ctx.strokeStyle = '#FFD700';
-        ctx.lineWidth = 3;
-        ctx.strokeRect(40, 150, 320, 180);
+    function drawCave() {
+        // الخلفية الصخرية
+        ctx.fillStyle = '#141416';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        ctx.fillStyle = '#FFD700';
-        ctx.font = 'bold 18px Courier New';
-        ctx.textAlign = 'center';
-        ctx.fillText('🏆 Achievement Unlocked!', 200, 190);
+        // تفاصيل الصخور والنتوءات
+        ctx.fillStyle = '#221e22';
+        ctx.fillRect(0, 350, canvas.width, 50); // الأرضية
+        ctx.fillRect(0, 0, 50, canvas.height); // الجدار الأيسر
+        ctx.fillRect(750, 0, 50, canvas.height); // الجدار الأيمن
 
-        ctx.fillStyle = '#fff';
-        ctx.font = 'bold 14px Courier New';
-        ctx.fillText('The Beginning', 200, 220);
-
-        ctx.font = '12px Courier New';
-        ctx.fillStyle = '#a3e635';
-        ctx.fillText('Congratulations! Mini-Figure Unlocked!', 200, 260);
-
-        // رسم شكل الـ Mini-Figure البكسلي الصغير كمكافأة
-        ctx.fillStyle = '#ec4899';
-        ctx.fillRect(185, 275, 30, 40);
+        // خيوط العنكبوت
+        ctx.strokeStyle = '#4a4852';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(0, 0); ctx.lineTo(100, 100);
+        ctx.moveTo(800, 0); ctx.lineTo(700, 100);
+        ctx.stroke();
     }
-}
 
-function loop() {
-    update();
-    draw();
-    requestAnimationFrame(loop);
-}
+    function drawClouds() {
+        ctx.save();
+        // تأثير البوابة السحابية في المنتصف
+        const gradient = ctx.createRadialGradient(400, 150, 50, 400, 150, 250);
+        gradient.addColorStop(0, 'rgba(255, 255, 255, 0.9)');
+        gradient.addColorStop(0.5, 'rgba(180, 220, 255, 0.6)');
+        gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        
+        ctx.fillStyle = gradient;
+        ctx.fillRect(200, 50, 400, 200);
 
-loop();
+        // سحب بكسلية متداخلة
+        ctx.fillStyle = '#ffffff';
+        // سحابة 1
+        ctx.fillRect(250, 120, 120, 60);
+        ctx.fillRect(220, 140, 160, 50);
+        // سحابة 2
+        ctx.fillRect(430, 100, 140, 70);
+        ctx.fillRect(450, 80, 100, 60);
+
+        // جسيمات ضوئية متطايرة نحو البوابة
+        ctx.fillStyle = '#ffd700';
+        for (let i = 0; i < 5; i++) {
+            let x = 350 + Math.sin(Date.now() / 500 + i) * 100;
+            let y = 150 + Math.cos(Date.now() / 300 + i) * 30;
+            ctx.fillRect(x, y, 6, 6);
+        }
+        ctx.restore();
+    }
+
+    function drawPlayer() {
+        ctx.save();
+        // حركة بسيطة للشخصية
+        let bobbing = Math.sin(Date.now() / 100) * 5;
+
+        // الجسم
+        ctx.fillStyle = '#333333';
+        ctx.fillRect(playerX, playerY + bobbing, 30, 50);
+
+        // الرأس
+        ctx.fillStyle = '#ffcc99';
+        ctx.fillRect(playerX + 5, playerY - 15 + bobbing, 20, 20);
+
+        // الشعر (أسود)
+        ctx.fillStyle = '#111111';
+        ctx.fillRect(playerX + 5, playerY - 20 + bobbing, 22, 10);
+
+        // اليد والشعلة
+        ctx.fillStyle = '#ff4500'; // لهب الشعلة
+        torchIntensity = Math.random() * 10;
+        ctx.fillRect(playerX + 35, playerY - 5 + bobbing - torchIntensity, 10, 15);
+        
+        ctx.fillStyle = '#8B4513'; // مقبض الشعلة
+        ctx.fillRect(playerX + 38, playerY + 10 + bobbing, 4, 15);
+
+        ctx.restore();
+    }
+
+    function update() {
+        if (isMovingLeft && playerX > 20) playerX -= 4;
+        if (isMovingRight && playerX < 740) playerX += 4;
+    }
+
+    function gameLoop() {
+        update();
+        drawCave();
+        drawClouds();
+        drawPlayer();
+        requestAnimationFrame(gameLoop);
+    }
+
+    gameLoop();
 </script>
-
 </body>
 </html>
