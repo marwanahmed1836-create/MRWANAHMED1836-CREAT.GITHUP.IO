@@ -1,230 +1,146 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>مغامرة الكهف الغامض</title>
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            background-color: #0b0908;
-            color: #fff;
-            font-family: 'Courier New', Courier, monospace;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            overflow: hidden;
-        }
-
-        #game-container {
-            position: relative;
-            width: 100%;
-            max-width: 900px;
-            height: 500px;
-            background-color: #151110;
-            border: 4px solid #3d2817;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            justify-content: flex-end;
-        }
-
-        canvas {
-            display: block;
-            width: 100%;
-            height: 100%;
-            image-rendering: pixelated;
-        }
-
-        #overlay-text {
-            position: absolute;
-            top: 25px;
-            left: 50%;
-            transform: translateX(-50%);
-            color: #e5a93b;
-            font-size: 28px;
-            font-weight: bold;
-            text-shadow: 3px 3px #000;
-            text-align: center;
-            pointer-events: none;
-            letter-spacing: 2px;
-        }
-
-        #touch-controls {
-            position: absolute;
-            bottom: 15px;
-            left: 15px;
-            right: 15px;
-            display: flex;
-            justify-content: space-between;
-            z-index: 10;
-        }
-
-        .ctrl-btn {
-            background: rgba(40, 30, 20, 0.7);
-            border: 2px solid #8c6747;
-            color: white;
-            padding: 15px 25px;
-            font-size: 20px;
-            font-weight: bold;
-            border-radius: 8px;
-            user-select: none;
-            outline: none;
-        }
-
-        .ctrl-btn:active {
-            background: rgba(140, 103, 71, 0.9);
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>The Beginning — Pixel Adventure</title>
+<style>
+:root{--gold:#f2bd52;--ink:#080d17}
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#070b13;color:#f5eee0;font-family:system-ui,Segoe UI,sans-serif;touch-action:none}
+body{display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 35%,#1a2940,#070b13 70%)}
+#shell{width:min(100vw,1100px);padding:12px}
+header{display:flex;justify-content:space-between;align-items:center;padding:2px 4px 10px;gap:8px}
+h1{font-size:clamp(15px,3vw,25px);letter-spacing:2px;margin:0;color:var(--gold);text-shadow:2px 3px #5b321b}
+#hud{font-size:12px;color:#c9d5e4;letter-spacing:1px}
+#frame{position:relative;border:4px solid #3c3b43;box-shadow:0 0 0 3px #10141d,0 15px 55px #000b;background:#080e19}
+canvas{display:block;width:100%;height:auto;image-rendering:pixelated;image-rendering:crisp-edges}
+#overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#050914bd;text-align:center;padding:20px}
+.panel{max-width:440px;background:#111c2b;border:3px solid #8b6a3b;padding:22px;box-shadow:8px 8px #05070c}
+.panel h2{color:var(--gold);margin:0 0 8px;letter-spacing:2px}
+.panel p{line-height:1.5;color:#d2d9e4;font-size:14px}
+button{border:2px solid #ffe09a;background:#d99a35;color:#21170c;font-weight:900;letter-spacing:1px;padding:12px 18px;font-size:14px;cursor:pointer;box-shadow:4px 4px #573817}
+button:active{transform:translate(2px,2px);box-shadow:2px 2px #573817}
+#touch{display:flex;justify-content:space-between;align-items:center;padding:12px 4px 0;user-select:none}
+.pad{display:flex;gap:10px}
+.ctrl{width:62px;height:54px;border:2px solid #8a8b91;background:#182437dd;color:#fff;border-radius:10px;font-size:24px;box-shadow:0 4px #05070c;touch-action:none}
+.ctrl.jump{width:86px;background:#6b4a23;color:#ffe3a0;font-size:14px}
+#hint{text-align:center;font-size:11px;color:#8998aa;padding-top:8px}
+@media(min-width:800px){#touch{opacity:.65}.ctrl{width:54px;height:44px}}
+</style>
 </head>
 <body>
-
-    <div id="game-container">
-        <div id="overlay-text">WHAT IT COULD BE ????</div>
-        <canvas id="gameCanvas"></canvas>
-        <div id="touch-controls">
-            <button class="ctrl-btn" id="btn-left">←</button>
-            <button class="ctrl-btn" id="btn-action">إضاءة</button>
-            <button class="ctrl-btn" id="btn-right">→</button>
-        </div>
-    </div>
-
-    <script>
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
-
-        canvas.width = 900;
-        canvas.height = 500;
-
-        let playerX = 100;
-        let playerY = 320;
-        const playerWidth = 35;
-        const playerHeight = 65;
-        let isMovingLeft = false;
-        let isMovingRight = false;
-        let isLighting = false;
-
-        // عناصر التحكم باللمس
-        document.getElementById('btn-left').addEventListener('touchstart', () => { isMovingLeft = true; });
-        document.getElementById('btn-left').addEventListener('touchend', () => { isMovingLeft = false; });
-        document.getElementById('btn-right').addEventListener('touchstart', () => { isMovingRight = true; });
-        document.getElementById('btn-right').addEventListener('touchend', () => { isMovingRight = false; });
-        document.getElementById('btn-action').addEventListener('touchstart', () => { isLighting = !isLighting; });
-
-        // لوحة المفاتيح للاختبار
-        window.addEventListener('keydown', (e) => {
-            if (e.key === 'ArrowLeft' || e.key === 'a') isMovingLeft = true;
-            if (e.key === 'ArrowRight' || e.key === 'd') isMovingRight = true;
-        });
-        window.addEventListener('keyup', (e) => {
-            if (e.key === 'ArrowLeft' || e.key === 'a') isMovingLeft = false;
-            if (e.key === 'ArrowRight' || e.key === 'd') isMovingRight = false;
-        });
-
-        function drawCaveBackground() {
-            // جدران الكهف الداكنة والعشب
-            ctx.fillStyle = '#110e0c';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            // تفاصيل الصخور والكهف المظلم بالخلفية
-            ctx.fillStyle = '#1c1714';
-            ctx.fillRect(50, 50, 200, 150);
-            ctx.fillRect(650, 40, 220, 180);
-
-            // مساحة السماء/السحب الزرقاء المميزة في وسط الصورة
-            ctx.fillStyle = '#22527b';
-            ctx.fillRect(250, 80, 400, 240);
-
-            // رسومات السحب البيضاء البكسلية داخل المنطقة الزرقاء
-            ctx.fillStyle = '#dbe4ee';
-            ctx.beginPath();
-            ctx.arc(350, 180, 45, 0, Math.PI * 2);
-            ctx.arc(420, 160, 60, 0, Math.PI * 2);
-            ctx.arc(500, 190, 50, 0, Math.PI * 2);
-            ctx.arc(570, 170, 40, 0, Math.PI * 2);
-            ctx.fill();
-
-            ctx.fillStyle = '#f0f4f8';
-            ctx.beginPath();
-            ctx.arc(380, 190, 30, 0, Math.PI * 2);
-            ctx.arc(470, 170, 45, 0, Math.PI * 2);
-            ctx.fill();
-
-            // العنصر المتوهج العائم في المنتصف (الحجر السحري)
-            ctx.fillStyle = '#fce251';
-            ctx.beginPath();
-            ctx.ellipse(470, 180, 12, 18, Math.PI / 4, 0, Math.PI * 2);
-            ctx.fill();
-            
-            // هالة التوهج حول الحجر
-            ctx.strokeStyle = 'rgba(252, 226, 81, 0.4)';
-            ctx.lineWidth = 6;
-            ctx.beginPath();
-            ctx.arc(470, 180, 25, 0, Math.PI * 2);
-            ctx.stroke();
-
-            // الأرضية الخشبية للكهف
-            ctx.fillStyle = '#2b1d12';
-            ctx.fillRect(0, 380, canvas.width, 120);
-            
-            ctx.fillStyle = '#3a2618';
-            ctx.fillRect(0, 380, canvas.width, 10); // خط الأرض العلوي
-        }
-
-        function drawPlayer() {
-            // رسم الشخصية (مغامر بملابس داكنة وشعلة نارية)
-            // الجسم
-            ctx.fillStyle = '#333333';
-            ctx.fillRect(playerX, playerY + 15, playerWidth - 10, 35);
-
-            // الرأس والشعر الأسود
-            ctx.fillStyle = '#ffcc99';
-            ctx.fillRect(playerX + 2, playerY, 20, 20);
-            ctx.fillStyle = '#111111';
-            ctx.fillRect(playerX, playerY - 3, 22, 10);
-
-            // الشعلة اليدوية وتأثير الإضاءة
-            ctx.fillStyle = '#8c5830'; // عصا الشعلة
-            ctx.fillRect(playerX + 22, playerY + 25, 6, 20);
-
-            // لهب الشعلة البرتقالي
-            ctx.fillStyle = '#ff4500';
-            ctx.beginPath();
-            ctx.arc(playerX + 25, playerY + 20, isLighting ? 14 : 9, 0, Math.PI * 2);
-            ctx.fill();
-
-            // توهج الشعلة إذا كانت مضاءة
-            if (isLighting) {
-                const gradient = ctx.createRadialGradient(playerX + 25, playerY + 20, 10, playerX + 25, playerY + 20, 90);
-                gradient.addColorStop(0, 'rgba(255, 165, 0, 0.4)');
-                gradient.addColorStop(1, 'rgba(255, 165, 0, 0)');
-                ctx.fillStyle = gradient;
-                ctx.beginPath();
-                ctx.arc(playerX + 25, playerY + 20, 90, 0, Math.PI * 2);
-                ctx.fill();
-            }
-        }
-
-        function update() {
-            if (isMovingLeft && playerX > 20) {
-                playerX -= 4;
-            }
-            if (isMovingRight && playerX < canvas.width - 60) {
-                playerX += 4;
-            }
-        }
-
-        function gameLoop() {
-            update();
-            drawCaveBackground();
-            drawPlayer();
-            requestAnimationFrame(gameLoop);
-        }
-
-        gameLoop();
-    </script>
+<div id="shell">
+<header><h1>THE BEGINNING</h1><div id="hud">✦ CRYSTALS <span id="score">0</span>/5 &nbsp; | &nbsp; LIGHT: ON</div></header>
+<div id="frame">
+<canvas id="game" width="960" height="540" aria-label="Pixel adventure game"></canvas>
+<div id="overlay"><div class="panel"><h2>WHAT IT COULD BE…</h2><p>A forgotten cave. A tiny light. And something glowing beyond the clouds.<br><br>Collect 5 crystals, find the white feather, and reach the golden door.</p><button id="start">ENTER THE CAVE</button><p style="font-size:11px;margin-bottom:0">Move: A / D or arrows · Jump: Space · Mobile: buttons below</p></div></div>
+</div>
+<div id="touch">
+<div class="pad"><button class="ctrl" data-key="left">◀</button><button class="ctrl" data-key="right">▶</button></div>
+<button class="ctrl jump" data-key="jump">JUMP ↑</button>
+</div>
+<div id="hint">Explore carefully. The light follows you. ✦</div>
+</div>
+<script>
+(()=> {
+const c=document.getElementById('game'),ctx=c.getContext('2d'),overlay=document.getElementById('overlay');
+ctx.imageSmoothingEnabled=false;
+const W=960,H=540, keys={}, touch={left:false,right:false,jump:false};
+let running=false,won=false,score=0,camera=0,frame=0;
+const world=2600, floor=468;
+const player={x:70,y:390,w:28,h:48,vx:0,vy:0,on:false,face:1};
+const platforms=[
+[0,468,560,72],[600,468,380,72],[1030,468,420,72],[1510,468,390,72],[1970,468,630,72],
+[270,380,120,18],[490,325,110,18],[760,390,130,18],[1110,370,120,18],[1320,315,120,18],[1600,385,130,18],[1810,330,130,18],[2110,380,140,18],[2310,315,120,18]
+];
+const crystals=[[310,345],[535,290],[825,355],[1370,280],[1855,295]].map(([x,y])=>({x,y,got:false}));
+const feather={x:2220,y:335,got:false};
+const door={x:2500,y:388};
+function rect(x,y,w,h,col){ctx.fillStyle=col;ctx.fillRect(Math.round(x),Math.round(y),w,h)}
+function text(t,x,y,size,col){ctx.font=`bold ${size}px monospace`;ctx.fillStyle=col;ctx.fillText(t,x,y)}
+function drawBackground(){
+ const g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,'#101d32');g.addColorStop(.65,'#18202b');g.addColorStop(1,'#090d15');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+ // distant cave walls
+ for(let i=0;i<24;i++){let x=(i*137-camera*.25)%(W+150)-60;let y=25+(i*47)%160;rect(x,y,65,18,'#222b37');rect(x+12,y-12,38,13,'#303743');}
+ for(let i=0;i<16;i++){let x=(i*191-camera*.4)%(W+180)-80;rect(x,220+(i*31)%90,90,15,'#202a35');}
+ // glowing opening and clouds in the far sky
+ const glow=ctx.createRadialGradient(745,170,5,745,170,180);glow.addColorStop(0,'#4f9bdc88');glow.addColorStop(1,'#17263a00');ctx.fillStyle=glow;ctx.fillRect(550,20,390,310);
+ rect(670,75,145,7,'#5a9fd5');rect(645,83,195,12,'#8ac5ef');rect(690,64,65,12,'#d5edff');
+ // stalactites
+ for(let i=0;i<13;i++){let x=(i*83-camera*.55)%(W+100)-30;rect(x,0,13,18,'#31343b');rect(x+4,15,6,17,'#242a33');}
+}
+function drawWorld(){
+ ctx.save();ctx.translate(-camera,0);
+ // cave floor/platforms
+ platforms.forEach(([x,y,w,h])=>{rect(x,y,w,h,'#303039');rect(x,y,w,8,'#64605a');for(let j=0;j<w;j+=34){rect(x+j+5,y+18,22,15,'#252a32');rect(x+j+15,y+38,12,8,'#41414a');}});
+ // decorative rubble
+ for(let i=0;i<42;i++){let x=(i*67+35)%world;let y=445-(i*13)%18;rect(x,y,8+(i%3)*4,8,'#41414b');}
+ crystals.forEach(a=>{if(!a.got){ctx.save();ctx.translate(a.x,a.y+Math.sin(frame*.08+a.x)*4);ctx.rotate(Math.PI/4);rect(-8,-8,16,16,'#6be8f4');rect(-4,-4,8,8,'#e0ffff');ctx.restore();}});
+ if(!feather.got){ctx.save();ctx.translate(feather.x,feather.y);ctx.rotate(-.45);rect(-3,-22,7,44,'#fff5c9');rect(-12,-9,10,7,'#fff');rect(-10,1,8,6,'#fff');rect(4,-14,9,7,'#fff');rect(4,0,8,7,'#fff');ctx.restore();const gg=ctx.createRadialGradient(feather.x,feather.y,2,feather.x,feather.y,65);gg.addColorStop(0,'#ffeaa888');gg.addColorStop(1,'#ffeaa800');ctx.fillStyle=gg;ctx.fillRect(feather.x-65,feather.y-65,130,130);}
+ // door
+ rect(door.x,door.y,54,80,'#8a6b3e');rect(door.x+7,door.y+7,40,66,'#fff0a0');rect(door.x+12,door.y+12,30,56,'#fffbd7');rect(door.x+39,door.y+43,4,5,'#b57a22');
+ // player
+ drawPlayer();
+ ctx.restore();
+}
+function drawPlayer(){
+ const x=player.x,y=player.y;
+ // shadow
+ rect(x+2,y+player.h,26,4,'#05070a99');
+ // legs
+ rect(x+5,y+31,8,15,'#202b3c');rect(x+17,y+31,8,15,'#202b3c');rect(x+2,y+43,12,5,'#11151d');rect(x+16,y+43,13,5,'#11151d');
+ // body and jacket
+ rect(x+4,y+17,22,19,'#65717b');rect(x+7,y+20,16,13,'#313d4b');rect(x+13,y+19,4,14,'#b6a58d');
+ // hair/head
+ rect(x+5,y+2,20,17,'#d6a27e');rect(x+3,y,23,8,'#17151b');rect(x+2,y+4,7,9,'#17151b');rect(x+21,y+4,6,8,'#17151b');
+ rect(x+(player.face===1?18:7),y+9,3,3,'#17151b');rect(x+10,y+15,8,2,'#704a3d');
+ // torch arm and flame
+ let tx=x+(player.face===1?28:-5);rect(tx,y+19,5,12,'#bd8d5c');rect(tx+1,y+12,4,8,'#8b603b');rect(tx-1,y+5,7,8,'#ffb632');rect(tx+1,y+1,4,6,'#fff1a2');
+}
+function drawLight(){
+ const px=player.x-camera+15,py=player.y+23;
+ const grad=ctx.createRadialGradient(px,py,8,px,py,235);grad.addColorStop(0,'#ffcc6640');grad.addColorStop(.35,'#ffbd3820');grad.addColorStop(1,'#020610ee');
+ ctx.fillStyle=grad;ctx.fillRect(0,0,W,H);
+ // vignette
+ const v=ctx.createRadialGradient(W/2,H/2,130,W/2,H/2,560);v.addColorStop(.45,'#00000000');v.addColorStop(1,'#02040b99');ctx.fillStyle=v;ctx.fillRect(0,0,W,H);
+}
+function draw(){
+ drawBackground();drawWorld();drawLight();
+ // HUD overlay / hints
+ text('THE CAVE',22,34,15,'#d8b66c');
+ if(feather.got)text('THE FEATHER IS YOURS',W-260,34,13,'#fff0ad');
+ if(won){ctx.fillStyle='#050914bb';ctx.fillRect(0,0,W,H);text('THE BEGINNING…',W/2-150,H/2-15,30,'#ffd778');text('YOU FOUND A LITTLE LIGHT.',W/2-145,H/2+22,14,'#fff');}
+}
+function update(){
+ if(!running||won)return;
+ frame++;
+ let left=keys.ArrowLeft||keys.a||touch.left,right=keys.ArrowRight||keys.d||touch.right,jump=keys[' ']||keys.ArrowUp||keys.w||touch.jump;
+ player.vx=(right?3.1:0)-(left?3.1:0);if(player.vx)player.face=player.vx>0?1:-1;
+ if(jump&&player.on){player.vy=-10.7;player.on=false;}
+ player.vy=Math.min(player.vy+.48,12);
+ let nx=player.x+player.vx,ny=player.y+player.vy;
+ player.x=Math.max(0,Math.min(world-player.w,nx));
+ player.y=ny;player.on=false;
+ for(const p of platforms){let [x,y,w,h]=p;if(player.x+player.w>x&&player.x<x+w&&player.y+player.h>=y&&player.y+player.h<=y+18&&player.vy>=0){player.y=y-player.h;player.vy=0;player.on=true;}}
+ if(player.y>H+100){player.x=70;player.y=390;player.vy=0;}
+ crystals.forEach(a=>{if(!a.got&&Math.abs(player.x+14-a.x)<24&&Math.abs(player.y+20-a.y)<34){a.got=true;score++;document.getElementById('score').textContent=score;}});
+ if(score===5&&Math.abs(player.x-feather.x)<40&&Math.abs(player.y-feather.y)<65)feather.got=true;
+ if(feather.got&&player.x+player.w>door.x&&player.x<door.x+55){won=true;}
+ camera=Math.max(0,Math.min(world-W,player.x-W*.38));
+}
+function loop(){update();draw();requestAnimationFrame(loop)}
+document.getElementById('start').onclick=()=>{overlay.style.display='none';running=true;};
+document.addEventListener('keydown',e=>{keys[e.key]=true;if([' ','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key))e.preventDefault();});
+document.addEventListener('keyup',e=>keys[e.key]=false);
+document.querySelectorAll('.ctrl').forEach(b=>{
+ const k=b.dataset.key;
+ const down=e=>{e.preventDefault();touch[k]=true;};
+ const up=e=>{e.preventDefault();touch[k]=false;};
+ b.addEventListener('pointerdown',down);b.addEventListener('pointerup',up);b.addEventListener('pointerleave',up);b.addEventListener('pointercancel',up);
+});
+loop();
+})();
+</script>
 </body>
 </html>
